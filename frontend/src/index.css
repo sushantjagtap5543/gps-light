@@ -31,6 +31,13 @@
   --color-brand-900: #7c2d12;
 }
 
+html, body, #root {
+  min-height: 100vh;
+  margin: 0;
+  padding: 0;
+  width: 100%;
+}
+
 body {
   background-color: var(--color-brand-50);
   color: #0f172a;
@@ -43,19 +50,27 @@ body {
   color: #f1f5f9;
 }
 
+/* Base text color overrides for form inputs */
+input, textarea, select {
+  color: #0f172a;
+}
+.dark input, .dark textarea, .dark select {
+  color: #f8fafc;
+}
+
 /* Premium Glassmorphism Card styling */
 .glass-panel {
   background-color: rgba(255, 255, 255, 0.7);
   backdrop-filter: blur(24px);
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.04);
-  border-radius: 1rem;
+  border: 1px solid rgba(255, 255, 255, 0.4);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.05);
+  border-radius: 1.25rem;
 }
 
 .dark .glass-panel {
-  background-color: rgba(30, 41, 59, 0.7);
-  border-color: rgba(255, 255, 255, 0.05);
-  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.2);
+  background-color: rgba(30, 41, 59, 0.75);
+  border-color: rgba(255, 255, 255, 0.08);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
 }
 
 /* High-end Buttons */

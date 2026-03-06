@@ -16,86 +16,46 @@ Built with reactivity in mind, **GeoSurePath** replaces legacy 30-second API pol
 
 ---
 
-## 🚀 Deployment Guide: GitHub & AWS Lightsail
+## 🚀 Automated Production Deployment (AWS Lightsail / Ubuntu)
 
-This guide will walk you through deploying the GeoSurePath frontend and preparing the infrastructure using an AWS Lightsail instance (Ubuntu/Node.js).
+Deploying the entire GeoSurePath stack (PostgreSQL, PostGIS, Redis, Node.js Backend, TCP Socket Server, Vite Frontend, PM2, Nginx) is now fully automated via a single master script.
 
-### Step 1: Pushing to GitHub
-1. Initialize your local directory as a Git repository:
-   ```bash
-   git init
-   git add .
-   git commit -m "Initial commit for GeoSurePath"
-   ```
-2. Create a new repository on GitHub.
-3. Link and push your local code:
-   ```bash
-   git branch -M main
-   git remote add origin https://github.com/YOUR_USERNAME/geo-sure-path.git
-   git push -u origin main
-   ```
+### Prerequisites
+1. Fresh **Ubuntu 22.04 or 24.04** server (AWS Lightsail $10/mo plan recommended).
+2. Ports configured in your firewall:
+   - **80** (HTTP / Nginx)
+   - **443** (HTTPS / Optional for SSL)
+   - **5023** (TCP Server for GPS Trackers)
 
-### Step 2: Provisioning AWS Lightsail
-1. Log into your **AWS Console** and navigate to **Lightsail**.
-2. Click **Create instance**.
-3. Select **Linux/Unix** platform and choose the **Node.js** blueprint (or Ubuntu 22.04 if you prefer a clean slate).
-4. Choose an instance plan (e.g., $5 to $10/month plan is sufficient for the frontend).
-5. Name your instance `geosurepath-prod` and click **Create instance**.
-
-### Step 3: Server Configuration & Deployment
-1. Connect to your Lightsail instance via the browser-based SSH terminal.
-2. Clone your repository onto the server:
+### 1-Click Installation
+1. SSH into your production server.
+2. Clone this repository:
    ```bash
    git clone https://github.com/YOUR_USERNAME/geo-sure-path.git
-   cd geo-sure-path/frontend
+   cd geo-sure-path
    ```
-3. Install dependencies:
+3. Run the automated install script:
    ```bash
-   npm install
+   chmod +x install.sh
+   ./install.sh
    ```
-4. Build the production React/Vite app:
-   ```bash
-   npm run build
-   ```
-5. Install `pm2` and `serve` to daemonize the application:
-   ```bash
-   sudo npm install -g pm2 serve
-   pm2 start serve --name "geosurepath" -- -s dist -l 80
-   pm2 startup
-   pm2 save
-   ```
-   *Note: Using port 80 requires elevated privileges or reverse proxy setups like Nginx. The easiest production setup is installing Nginx, configuring the root to `/home/ubuntu/geo-sure-path/frontend/dist`, and setting up SSL.*
 
-### Step 4: Setting up Nginx + SSL (Recommended)
-1. Install Nginx:
-   ```bash
-   sudo apt update && sudo apt install nginx -y
-   ```
-2. Create an Nginx config file (`/etc/nginx/sites-available/geosurepath`):
-   ```nginx
-   server {
-       listen 80;
-       server_name tracking.geosurepath.com; # Replace with your domain
-       root /home/ubuntu/geo-sure-path/frontend/dist;
-       index index.html;
+> **What the script does organically:**
+> - **[0/9]** Cleans up any stalled processes/directories from previous runs.
+> - **[1/9 - 4/9]** Installs Node.js v20, Redis, PostgreSQL, and PostGIS natively.
+> - **[4.5/9]** Creates the `gps_admin` DB user, attaches PostGIS rules, and auto-loads `database/schema.sql`.
+> - **[5/9 - 7/9]** Installs all `npm` modules across the frontend, backend, and tcp server, then compiles Vite.
+> - **[8/9]** Binds the processes to `pm2` daemons (API, TCP, and SPA React server) so they restore on reboot.
+> - **[9/9]** Generates a daily CRON backup script for the PostgreSQL database (`02:00 AM`).
 
-       location / {
-           try_files $uri $uri/ /index.html;
-       }
-   }
-   ```
-3. Link the config and restart:
-   ```bash
-   sudo ln -s /etc/nginx/sites-available/geosurepath /etc/nginx/sites-enabled/
-   sudo systemctl restart nginx
-   ```
-4. Generate Free SSL Certificate via Certbot:
+### Connecting Domain & HTTPS
+Once the install completes and the PM2 React server runs on Port `3000`:
+1. Use Nginx as a reverse proxy linking Port 80 to Port 3000.
+2. Run Certbot for free SSL:
    ```bash
    sudo apt install certbot python3-certbot-nginx -y
-   sudo certbot --nginx -d tracking.geosurepath.com
+   sudo certbot --nginx -d tracking.yourdomain.com
    ```
-
-Your platform should now be live and secure!
 
 ---
 
