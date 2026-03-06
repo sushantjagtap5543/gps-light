@@ -80,15 +80,49 @@ cd ..
 echo "[7/9] Installing and Building Frontend (React/Vite)..."
 cd frontend
 rm -rf node_modules dist
-npm install --fetch-timeout=600000
+npm install --fetch-timeout=600000 --legacy-peer-deps
 npm run build
 cd ..
 
 # 8. Setup Nginx & PM2 Daemons
 echo "[8/9] Installing Nginx and mapping Daemons..."
 sudo apt-get install -y nginx
+
+echo "Configuring Nginx Reverse Proxy for 3.108.114.12..."
+sudo bash -c 'cat << '\''EOF'\'' > /etc/nginx/sites-available/geosurepath
+server {
+    listen 80;
+    server_name 3.108.114.12;
+
+    location / {
+        proxy_pass http://127.0.0.1:3000;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection '\''upgrade'\'';
+        proxy_set_header Host $host;
+        proxy_cache_bypass $http_upgrade;
+    }
+
+    location /api/ {
+        proxy_pass http://127.0.0.1:8080/api/;
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+    }
+
+    location /socket.io/ {
+        proxy_pass http://127.0.0.1:8080/socket.io/;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection '\''upgrade'\'';
+        proxy_set_header Host $host;
+    }
+}
+EOF'
+
+sudo ln -sf /etc/nginx/sites-available/geosurepath /etc/nginx/sites-enabled/
+sudo rm -f /etc/nginx/sites-enabled/default
 sudo systemctl enable nginx
-sudo systemctl start nginx
+sudo systemctl restart nginx
 
 # Start Node processes
 pm2 start backend/src/app.js --name "geosurepath-api"
@@ -98,7 +132,7 @@ TCP_PORT=5023 pm2 start tcp-server/src/server.js --name "geosurepath-tcp"
 pm2 serve frontend/dist 3000 --name "geosurepath-frontend" --spa
 
 pm2 save
-pm2 startup | sudo bash
+env PATH=$PATH:/usr/bin pm2 startup ubuntu -u root --hp /root
 
 # 9. Setup Daily Autobackup
 echo "[9/9] Setting up daily autobackup for PostgreSQL..."
